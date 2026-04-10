@@ -2,6 +2,16 @@
 
 Academic PDF research assistant: ingest papers, ask questions, get cited answers.
 
+## Model Provider Options
+
+This app supports two modes:
+
+- `OpenAI` mode: uses OpenAI for embeddings + chat.
+- `Local (Ollama)` mode: uses your local Ollama server for embeddings + chat (no OpenAI key required).
+
+You can switch between providers in the UI (top-right toggle).  
+Document indexes are provider-specific, so upload PDFs separately per provider.
+
 ## Stack
 
 - FastAPI backend
@@ -14,7 +24,7 @@ Academic PDF research assistant: ingest papers, ask questions, get cited answers
 
 ```bash
 cp .env.example .env
-# edit .env
+# edit .env (pick OpenAI or Ollama settings)
 docker compose up --build
 ```
 
@@ -28,6 +38,43 @@ docker compose up --build
 2. Toggle provider in the top-right: `OpenAI` or `Local (Ollama)`
 3. Upload PDFs in the sidebar (indexes are provider-specific)
 4. Ask questions in chat
+
+## Provider Setup
+
+### Use OpenAI
+
+Set in `.env`:
+
+```env
+OPENAI_API_KEY=your_key_here
+MODEL_ID=gpt-4o
+DEFAULT_PROVIDER=openai
+```
+
+### Use Local Ollama
+
+1. Make sure Ollama is running on your machine.
+2. Pull models (example):
+
+```bash
+ollama pull qwen2.5:7b
+ollama pull nomic-embed-text
+```
+
+3. Set in `.env`:
+
+```env
+DEFAULT_PROVIDER=ollama
+OLLAMA_BASE_URL=http://host.docker.internal:11434
+OLLAMA_CHAT_MODEL=qwen2.5:7b
+OLLAMA_EMBED_MODEL=nomic-embed-text
+```
+
+If you run backend outside Docker, `OLLAMA_BASE_URL` is usually:
+
+```env
+OLLAMA_BASE_URL=http://localhost:11434
+```
 
 ## API endpoints
 
@@ -53,6 +100,4 @@ docker compose up --build
 ## Notes
 
 - Collections are split by provider (`openai` and `ollama`) so retrieval stays embedding-compatible.
-- If using Ollama, pull models first, for example:
-  - `ollama pull llama3.1:8b`
-  - `ollama pull nomic-embed-text`
+- If an Ollama model is missing, ingestion/chat will return a clear error with installed model names and pull instructions.
