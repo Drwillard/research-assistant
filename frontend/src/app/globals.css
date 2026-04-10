@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Markdown content styles */
+.prose h1, .prose h2, .prose h3 {
+  @apply font-semibold text-gray-800 mt-4 mb-2;
+}
+.prose h1 { @apply text-xl; }
+.prose h2 { @apply text-lg; }
+.prose h3 { @apply text-base; }
+.prose p { @apply mb-3 leading-relaxed; }
+.prose ul, .prose ol { @apply mb-3 pl-5; }
+.prose li { @apply mb-1; }
+.prose ul li { @apply list-disc; }
+.prose ol li { @apply list-decimal; }
+.prose code {
+  @apply bg-gray-100 text-gray-800 rounded px-1 py-0.5 text-sm font-mono;
+}
+.prose pre {
+  @apply bg-gray-900 text-gray-100 rounded-lg p-4 overflow-x-auto mb-3;
+}
+.prose pre code {
+  @apply bg-transparent text-gray-100 p-0;
+}
+.prose blockquote {
+  @apply border-l-4 border-blue-300 pl-4 italic text-gray-600 my-3;
+}
+.prose strong { @apply font-semibold text-gray-900; }
+.prose a { @apply text-blue-600 underline; }
+.prose table { @apply w-full border-collapse mb-3; }
+.prose th { @apply border border-gray-300 bg-gray-50 px-3 py-1.5 text-left font-semibold; }
+.prose td { @apply border border-gray-300 px-3 py-1.5; }
