@@ -2,6 +2,7 @@ from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from .benchmarking import parse_queries, run_compare_benchmarks, run_cost_model, run_latency_benchmark
 from .config import DEFAULT_PROVIDER, normalize_provider
 from .ingestion import delete_document, ingest_pdf, list_documents
 from .rag import query_rag
@@ -32,6 +33,21 @@ class Source(BaseModel):
 class ChatResponse(BaseModel):
     answer: str
     sources: list[Source]
+
+
+class CostModelRequest(BaseModel):
+    monthly_requests: int
+    avg_input_tokens: int
+    avg_output_tokens: int
+    openai_input_per_1m: float = 0.15
+    openai_output_per_1m: float = 0.60
+    local_fixed_monthly: float = 0.0
+    local_power_monthly: float = 0.0
+
+
+class CompareBenchmarkRequest(BaseModel):
+    cpu_report: dict
+    gpu_report: dict
 
 
 @app.get("/health")
@@ -84,3 +100,59 @@ async def chat(request: ChatRequest):
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Chat failed: {str(e)}")
     return result
+
+
+@app.post("/benchmarks/latency")
+async def benchmark_latency(
+    file: UploadFile = File(...),
+    provider: str = Form(DEFAULT_PROVIDER),
+    runs: int = Form(5),
+    warmup_runs: int = Form(1),
+    queries: str | None = Form(None),
+):
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
+    content = await file.read()
+    if len(content) == 0:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+    try:
+        resolved_provider = normalize_provider(provider)
+        query_list = parse_queries(queries)
+        result = await run_latency_benchmark(
+            pdf_bytes=content,
+            filename=file.filename,
+            provider=resolved_provider,
+            queries=query_list,
+            runs=runs,
+            warmup_runs=warmup_runs,
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Benchmark failed: {str(e)}")
+
+
+@app.post("/benchmarks/cost-model")
+async def benchmark_cost_model(request: CostModelRequest):
+    try:
+        return run_cost_model(
+            monthly_requests=request.monthly_requests,
+            avg_input_tokens=request.avg_input_tokens,
+            avg_output_tokens=request.avg_output_tokens,
+            openai_input_per_1m=request.openai_input_per_1m,
+            openai_output_per_1m=request.openai_output_per_1m,
+            local_fixed_monthly=request.local_fixed_monthly,
+            local_power_monthly=request.local_power_monthly,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+
+@app.post("/benchmarks/compare")
+async def benchmark_compare(request: CompareBenchmarkRequest):
+    try:
+        return run_compare_benchmarks(request.cpu_report, request.gpu_report)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))

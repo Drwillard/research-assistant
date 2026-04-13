@@ -38,6 +38,14 @@ docker compose up --build
 2. Toggle provider in the top-right: `OpenAI` or `Local (Ollama)`
 3. Upload PDFs in the sidebar (indexes are provider-specific)
 4. Ask questions in chat
+5. Open `Benchmarks` tab for latency, cost, and CPU/GPU comparisons
+
+## Benchmark UI
+
+The app includes a built-in benchmark UI (top tab: `Benchmarks`) with two tools:
+
+- `Latency Benchmark`: upload a PDF, set runs/warmup, and benchmark end-to-end query latency.
+- `Cost Savings Model`: estimate monthly OpenAI spend versus local fixed/power costs.
 
 ## Provider Setup
 
@@ -101,3 +109,54 @@ OLLAMA_BASE_URL=http://localhost:11434
 
 - Collections are split by provider (`openai` and `ollama`) so retrieval stays embedding-compatible.
 - If an Ollama model is missing, ingestion/chat will return a clear error with installed model names and pull instructions.
+
+## Make It Strong (Local-First Metrics)
+
+This repo now includes scripts to quantify:
+
+- Latency vs OpenAI
+- Cost savings vs OpenAI
+
+### 1) Latency benchmark (local or OpenAI)
+
+Run against your running API:
+
+```bash
+python backend/scripts/benchmark_local_stack.py \
+  --api-url http://localhost:8000 \
+  --provider ollama \
+  --pdf path/to/sample.pdf \
+  --query "Summarize the paper" \
+  --query "List key limitations" \
+  --runs 5 \
+  --label ollama-cpu \
+  --output benchmark-results/ollama-cpu.json
+```
+
+Run the same for OpenAI:
+
+```bash
+python backend/scripts/benchmark_local_stack.py \
+  --api-url http://localhost:8000 \
+  --provider openai \
+  --pdf path/to/sample.pdf \
+  --runs 5 \
+  --label openai \
+  --output benchmark-results/openai.json
+```
+
+### 2) Cost savings model
+
+Estimate monthly OpenAI cost vs local fixed/power cost:
+
+```bash
+python backend/scripts/cost_savings_model.py \
+  --monthly-requests 100000 \
+  --avg-input-tokens 1200 \
+  --avg-output-tokens 350 \
+  --openai-input-per-1m 0.15 \
+  --openai-output-per-1m 0.60 \
+  --local-fixed-monthly 250 \
+  --local-power-monthly 45 \
+  --output benchmark-results/cost-model.json
+```
